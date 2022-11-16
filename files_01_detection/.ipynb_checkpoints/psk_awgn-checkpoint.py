@@ -1,8 +1,3 @@
-'''
-Generate CSV dataset for ML.
-PSK over AWGN channel.
-AK. May 2021
-'''
 import numpy as np
 import commpy.modulation as cm
 import commpy.utilities as cu
@@ -19,7 +14,10 @@ def psk_constellation(M, unitAvgPower=True):
     const  = np.array([complex(pskmod.modulate(bits)) for bits in bitarrays])
 
     if unitAvgPower:
-        const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
+        print(const)
+        print(np.absolute(const))
+        const = const / np.absolute(const)
+        print(const)
 
     return const
 
@@ -44,7 +42,7 @@ def generate_symbols(transmissions=100, M=16):
 
     ind = np.random.randint(M, size=transmissions)
 
-    # QAM symbols for each antenna
+    # PSK symbols for each antenna
     x   = constellation[ind]
 
     return x, ind

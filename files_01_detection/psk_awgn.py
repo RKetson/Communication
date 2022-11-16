@@ -14,7 +14,7 @@ def psk_constellation(M, unitAvgPower=True):
     const  = np.array([complex(pskmod.modulate(bits)) for bits in bitarrays])
 
     if unitAvgPower:
-        const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
+        const = const / np.absolute(const)
 
     return const
 
