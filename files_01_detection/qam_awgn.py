@@ -19,6 +19,7 @@ def qam_constellation(M, unitAvgPower=True):
     const  = np.array([complex(qammod.modulate(bits)) for bits in bitarrays])
 
     if unitAvgPower:
+        print(const)
         const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
 
     return const

@@ -20,8 +20,23 @@ Theoretical symbol error probability for squared M-PSK.
 
 p = lambda x,Es: np.exp(-Es)/(2*np.pi)*(1+np.exp(Es*(np.cos(x)**2))*np.sqrt(4*np.pi*Es)*np.cos(x)*(1-_qfunc(np.sqrt(2*Es)*np.cos(x))))
 
-def theoretical_ser(M, SNR_db):
-    Pe = 1 - quad(p, -np.pi/M, np.pi/M, args=(10**(SNR_db/10),))[0]
+def theoretical_ser(mod, M, SNR_db, channel):
+    if mod == 'PSK':
+        if channel == 'awgn':
+            Pe = 1 - quad(p, -np.pi/M, np.pi/M, args=(10**(SNR_db/10),))[0]
+        elif channel == 'rayleigh':
+            Pe = (M - 1) / (M * np.log2(M) * np.sin(np.pi / M)**2 * 10**(SNR_db/10)/np.log2(M))
+    else:
+        if channel == 'awgn':
+            SNR_l = 10**(SNR_db/10) #from dB to linear scale
+            Pe = 4*(1-(1/np.sqrt(M)))*_qfunc(np.sqrt(3*SNR_l/(M-1))) \
+                 - 4*(1-(1/np.sqrt(M)))**2 * _qfunc(np.sqrt(3*SNR_l/(M-1)))**2
+        elif channel == 'rayleigh':
+            k = np.log2(M)
+            SNR_l = 10**(SNR_db/10)
+            c1 = 1.5 * SNR_l / (M - 1)
+            n1 = np.sqrt(c1 / (c1 + 1))
+            Pe = 2 * (np.sqrt(M) - 1) / np.sqrt(M) * (1 - n1) - ((np.sqrt(M) - 1) / np.sqrt(M)) * ((np.sqrt(M) - 1) / np.sqrt(M)) * (1 - 4 * n1 / np.pi * np.arctan(1 / n1))
     return Pe
 
 def ser(clf, X, y):
@@ -87,6 +102,22 @@ def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True):
                    ncol=2, handleheight=2, labelspacing=0.05, frameon=False)
     plt.show()
 
+    
+def plot_symbols(X_train, y_train, M, symbs):
+    custom_cmap = cm.get_cmap('tab20')
+    num_classes = M
+    colors = custom_cmap.colors[:num_classes]
+    levels = np.arange(num_classes + 2) - 0.5
+
+    for ii in range(num_classes):
+        selected_indices = np.argwhere(y_train==ii)
+        selected_indices = selected_indices.reshape((-1))
+        plt.plot(X_train[selected_indices, 0], X_train[selected_indices, 1], 'o', color=colors[ii], label=f'{ii}')
+        
+    plt.plot(np.real(symbs), np.imag(symbs), 'rx')
+    plt.legend(title='Classes', bbox_to_anchor=(1, 1), loc='upper left', ncol=2, handleheight=2, labelspacing=0.05, frameon=False)
+
+    plt.show()  
 
 def main():
     # file_name = 'psk_crazy.csv'

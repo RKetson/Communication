@@ -3,31 +3,28 @@ import commpy.modulation as cm
 import commpy.utilities as cu
 import matplotlib.pyplot as plt
 import commpy.channels
-from commpy.channels import SISOFlatChannel
+from libs.commpy_mod import SISOFlatChannel
 
-def psk_constellation(M, unitAvgPower=True):
-    bits_per_PSKsymbol = int(np.log2(M))
-    bitarrays = [cu.dec2bitarray(obj, bits_per_PSKsymbol)
+def mod_constellation(M, unitAvgPower=True, mod='PSK'):
+    bits_per_symbol = int(np.log2(M))
+    bitarrays = [cu.dec2bitarray(obj, bits_per_symbol)
                  for obj
                  in np.arange(0, M)]
-    pskmod = cm.PSKModem(M)
-    const  = np.array([complex(pskmod.modulate(bits)) for bits in bitarrays])
+    sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
+    const  = np.array([complex(sig_mod.modulate(bits)) for bits in bitarrays])
 
-    if unitAvgPower:
-        print(const)
-        print(np.absolute(const))
-        const = const / np.absolute(const)
-        print(const)
+    if unitAvgPower and mod == 'QAM':
+        const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
 
     return const
 
-def psk_demod(x, M, unitAvgPower=True):
-    const = psk_constellation(M, unitAvgPower=unitAvgPower)
+def mod_demod(mod, x, M, unitAvgPower=True):
+    const = mod_constellation(M, unitAvgPower=unitAvgPower, mod=mod)
 
     const = const.reshape(const.shape[0], 1)
     return abs(x - const).argmin(0)
 
-def generate_symbols(transmissions=100, M=16):
+def generate_symbols(mod, transmissions=100, M=16):
     """
     Parameters
     ----------
@@ -38,7 +35,7 @@ def generate_symbols(transmissions=100, M=16):
     Returns
     -------
     """
-    constellation = psk_constellation(M, unitAvgPower=True)
+    constellation = mod_constellation(M, unitAvgPower=True, mod=mod)
 
     ind = np.random.randint(M, size=transmissions)
 
@@ -47,6 +44,27 @@ def generate_symbols(transmissions=100, M=16):
 
     return x, ind
 
+def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
+    
+    symbs, indices = generate_symbols(Mod, num_symbols, M)
+    
+    if type == 'awgn':
+        channel = SISOFlatChannel(None, (1 + 0j, 0j))
+        channel.set_SNR_dB(SNR_dB, float(code_rate), Es)
+        output = channel.propagate(symbs)
+        
+    elif type == 'rayleigh':
+        channel = SISOFlatChannel(None, (0j, 1 + 0j))
+        channel.set_SNR_dB(SNR_dB, float(code_rate), Es)
+        output = channel.propagate(symbs)
+    
+    elif type == 'crazy':
+        output = crazy_channel_propagate(symbs, SNR_dB)
+        
+    else:
+        raise ValueError(f'Channel type {type} not found')
+    
+    return symbs, indices, output
 
 def main():
     num_of_symbols = 3000
