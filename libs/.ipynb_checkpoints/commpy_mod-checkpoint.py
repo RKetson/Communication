@@ -2,7 +2,7 @@ from __future__ import division, print_function  # Python 2 compatibility
 
 from numpy import abs, sqrt, sum, zeros, identity, hstack, einsum, trace, kron, absolute, fromiter, array, exp, \
     pi, cos
-from numpy.random import randn, random, standard_normal
+from numpy.random import randn, random, standard_normal, normal
 from scipy.linalg import sqrtm
 
 __all__ = ['SISOFlatChannel', 'MIMOFlatChannel', 'bec', 'bsc', 'awgn']
@@ -164,13 +164,11 @@ class SISOFlatChannel(_FlatChannel):
         # Generate channel
         self.channel_gains = self.fading_param[0]
         if self.isComplex:
-            self.channel_gains += (standard_normal(nb_symb) + 1j * standard_normal(nb_symb)) * self.fading_param[1]
+            self.channel_gains += (normal(0, sqrt(1/2), nb_symb) + 1j * normal(0, sqrt(1/2), nb_symb)) * sqrt(self.fading_param[1])
         else:
-            self.channel_gains += standard_normal(nb_symb) * sqrt(self.fading_param[1])
+            self.channel_gains += normal(0, sqrt(1/2), nb_symb) * sqrt(self.fading_param[1])
 
         # Generate outputs
-        print(self.channel_gains)
-        print(abs(self.channel_gains))
         self.unnoisy_output = abs(self.channel_gains) * msg
         return self.unnoisy_output + self.noises
 

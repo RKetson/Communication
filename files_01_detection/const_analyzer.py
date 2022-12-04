@@ -7,6 +7,7 @@ from scipy.integrate import quad
 from scipy import special as sp
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
+from scipy.misc import derivative
 
 '''
 Q function expressed in terms of the error function (https://en.wikipedia.org/wiki/Q-function).
@@ -15,29 +16,50 @@ def _qfunc(x):
     return 0.5-0.5*sp.erf(x/np.sqrt(2))
 
 """
-Theoretical symbol error probability for squared M-PSK.
+Theoretical symbol error probability
 """
 
 p = lambda x,Es: np.exp(-Es)/(2*np.pi)*(1+np.exp(Es*(np.cos(x)**2))*np.sqrt(4*np.pi*Es)*np.cos(x)*(1-_qfunc(np.sqrt(2*Es)*np.cos(x))))
 
-def theoretical_ser(mod, M, SNR_db, channel):
+def theoretical_ser(mod, M, SNR_db, channel, Es = 1):
+    if channel == 'awgn':
+        if mod == 'PSK':
+            Pe = 1 - quad(p, -np.pi/M, np.pi/M, args=(10**(SNR_db/10),))[0]
+        else:
+            SNR_l = 10**(SNR_db/10) #from dB to linear scale
+            Pe = 4*(1-(1/np.sqrt(M)))*_qfunc(np.sqrt(3*SNR_l/(M-1))) \
+                 - 4*(1-(1/np.sqrt(M)))**2 * _qfunc(np.sqrt(3*SNR_l/(M-1)))**2
+    elif channel == 'rayleigh':
+        def Prob_e(C, D):
+            return (C / 2) * (1 - np.sqrt((D * Es / 2) / (1 + D * Es / 2)))
+        if mod == 'PSK':
+            Pe = Prob_e(2, 2 * np.log2(M) * np.sin(np.pi / M)**2)
+        else:
+            Pe = Prob_e(4 * (1 - 1 / np.sqrt(M)), 3 * np.log2(M) / (M - 1))
+    
+    return Pe
+"""     
     if mod == 'PSK':
         if channel == 'awgn':
             Pe = 1 - quad(p, -np.pi/M, np.pi/M, args=(10**(SNR_db/10),))[0]
         elif channel == 'rayleigh':
-            Pe = (M - 1) / (M * np.log2(M) * np.sin(np.pi / M)**2 * 10**(SNR_db/10)/np.log2(M))
+            SNR_l = 10**(SNR_db/10)
+            u = np.sqrt(SNR_l/(SNR_l + 1))
+            def f(b):
+                return (1 / (b - u**2))*(np.pi / M * (M - 1) - u * np.sin(np.pi / M) / np.sqrt(b - u**2 * np.cos(np.pi / M)**2) * (1 / np.arctan(-u * np.cos(np.pi / M) / np.sqrt(b - u**2 * np.cos(np.pi / M)**2))))
+            
+            Pe = ((-1)**(L - 1) * (1 - u**2)**L) / (np.pi * sp.factorial(L - 1)) * derivative(f, 1.0, n=(L-1), dx=1e-6)
+            # Pe = (M - 1) / (M * np.log2(M) * np.sin(np.pi / M)**2 * 10**(SNR_db/10)/np.log2(M))
     else:
         if channel == 'awgn':
-            SNR_l = 10**(SNR_db/10) #from dB to linear scale
-            Pe = 4*(1-(1/np.sqrt(M)))*_qfunc(np.sqrt(3*SNR_l/(M-1))) \
-                 - 4*(1-(1/np.sqrt(M)))**2 * _qfunc(np.sqrt(3*SNR_l/(M-1)))**2
+
         elif channel == 'rayleigh':
             k = np.log2(M)
             SNR_l = 10**(SNR_db/10)
             c1 = 1.5 * SNR_l / (M - 1)
             n1 = np.sqrt(c1 / (c1 + 1))
             Pe = 2 * (np.sqrt(M) - 1) / np.sqrt(M) * (1 - n1) - ((np.sqrt(M) - 1) / np.sqrt(M)) * ((np.sqrt(M) - 1) / np.sqrt(M)) * (1 - 4 * n1 / np.pi * np.arctan(1 / n1))
-    return Pe
+"""
 
 def ser(clf, X, y):
     """ Calculate the misclassification rate, which
