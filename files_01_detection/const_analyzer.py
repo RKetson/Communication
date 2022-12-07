@@ -31,7 +31,8 @@ def theoretical_ser(mod, M, SNR_db, channel, Es = 1):
                  - 4*(1-(1/np.sqrt(M)))**2 * _qfunc(np.sqrt(3*SNR_l/(M-1)))**2
     elif channel == 'rayleigh':
         def Prob_e(C, D):
-            return (C / 2) * (1 - np.sqrt((D * Es / 2) / (1 + D * Es / 2)))
+            SNR_l = 10**(SNR_db/10)
+            return (C / 2) * (1 - np.sqrt((D * SNR_l / 2) / (1 + D * SNR_l / 2)))
         if mod == 'PSK':
             Pe = Prob_e(2, 2 * np.log2(M) * np.sin(np.pi / M)**2)
         else:
