@@ -3,11 +3,13 @@ import numpy as np
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import seaborn as sns
+import tensorflow as tf
 from scipy.integrate import quad
 from scipy import special as sp
 from sklearn.metrics import confusion_matrix
 from sklearn.tree import DecisionTreeClassifier
 from scipy.misc import derivative
+
 
 '''
 Q function expressed in terms of the error function (https://en.wikipedia.org/wiki/Q-function).
@@ -71,10 +73,15 @@ def ser(clf, X, y):
 
     return ser
 
-def plot_confusion_matrix(clf, X, y, num_classes):
+def plot_confusion_matrix(clf, X, y, num_classes, nn=False):
     """ Plot the confusion matrix
     """
-    y_pred   = clf.predict(X)
+    if nn:
+        y_pred   = tf.math.argmax(clf(X), 1)
+        y = tf.reshape(y, [-1])
+    else:
+        y_pred   = clf.predict(X)
+        
     conf_mtx = confusion_matrix(y, y_pred)
 
     plt.figure(figsize=(10,6))
@@ -89,17 +96,24 @@ def plot_confusion_matrix(clf, X, y, num_classes):
     plt.show()
 
 
-def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True):
+def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True, nn=False):
     """ Plot the classifier decision regions
     """
+    if nn:
+        X = X.numpy()
+        y = (tf.reshape(y, [-1])).numpy()
     num_classes = int(np.max(y))+1 #e.g. 16 for PSK-16
+    print(num_classes)
     axes = [np.min(X[:,0]), np.max(X[:,0]),np.min(X[:,1]), np.max(X[:,1])]
     #print(axes)
     x1s = np.linspace(axes[0], axes[1], 200)
     x2s = np.linspace(axes[2], axes[3], 200)
     x1, x2 = np.meshgrid(x1s, x2s)
     X_new = np.c_[x1.ravel(), x2.ravel()]
-    y_pred = classifier.predict(X_new).reshape(x1.shape)
+    if nn:
+        y_pred = ((tf.math.argmax(classifier(X_new), 1)).numpy()).reshape(x1.shape)
+    else:
+        y_pred = classifier.predict(X_new).reshape(x1.shape)
 
     # Set different color for each class
     custom_cmap = cm.get_cmap('tab20')
