@@ -23,7 +23,7 @@ Theoretical symbol error probability
 
 p = lambda x,Es: np.exp(-Es)/(2*np.pi)*(1+np.exp(Es*(np.cos(x)**2))*np.sqrt(4*np.pi*Es)*np.cos(x)*(1-_qfunc(np.sqrt(2*Es)*np.cos(x))))
 
-def theoretical_ser(mod, M, SNR_db, channel, Es = 1):
+def theoretical_error(mod, M, SNR_db, channel, epb=True):
     if channel == 'awgn':
         if mod == 'PSK':
             Pe = 1 - quad(p, -np.pi/M, np.pi/M, args=(10**(SNR_db/10),))[0]
@@ -40,7 +40,10 @@ def theoretical_ser(mod, M, SNR_db, channel, Es = 1):
         else:
             Pe = Prob_e(4 * (1 - 1 / np.sqrt(M)), 3 * np.log2(M) / (M - 1))
     
-    return Pe
+    if epb:
+        return Pe/np.log2(M)
+    else:
+        return Pe
 """     
     if mod == 'PSK':
         if channel == 'awgn':
