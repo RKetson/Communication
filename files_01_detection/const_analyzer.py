@@ -106,9 +106,9 @@ def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True, n
         X = X.numpy()
         y = (tf.reshape(y, [-1])).numpy()
     num_classes = int(np.max(y))+1 #e.g. 16 for PSK-16
-    print(num_classes)
+
     axes = [np.min(X[:,0]), np.max(X[:,0]),np.min(X[:,1]), np.max(X[:,1])]
-    #print(axes)
+
     x1s = np.linspace(axes[0], axes[1], 200)
     x2s = np.linspace(axes[2], axes[3], 200)
     x1, x2 = np.meshgrid(x1s, x2s)
