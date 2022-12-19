@@ -67,11 +67,16 @@ def theoretical_error(mod, M, SNR_db, channel, epb=True):
             Pe = 2 * (np.sqrt(M) - 1) / np.sqrt(M) * (1 - n1) - ((np.sqrt(M) - 1) / np.sqrt(M)) * ((np.sqrt(M) - 1) / np.sqrt(M)) * (1 - 4 * n1 / np.pi * np.arctan(1 / n1))
 """
 
-def ser(clf, X, y):
+def ser(clf, X, y, nn=False):
     """ Calculate the misclassification rate, which
         coincides with the symbol error rate (SER) for PSK transmission.
     """
-    y_pred = clf.predict(X)
+    if nn:
+        y_pred   = (tf.math.argmax(clf(X), 1)).numpy()
+        y = (tf.reshape(y, [-1])).numpy()
+    else:
+        y_pred   = clf.predict(X)
+
     ser    = np.sum(y != y_pred)/len(y)
 
     return ser
