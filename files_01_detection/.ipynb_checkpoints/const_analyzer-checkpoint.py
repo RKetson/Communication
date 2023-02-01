@@ -112,12 +112,14 @@ def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True, n
         y = (tf.reshape(y, [-1])).numpy()
     num_classes = int(np.max(y))+1 #e.g. 16 for PSK-16
 
-    axes = [np.min(X[:,0]), np.max(X[:,0]),np.min(X[:,1]), np.max(X[:,1])]
+    axes = [np.min(X[:,0]), np.max(X[:,0]),np.min(X[:,1]), np.max(X[:,1]), np.min(X[:,2]), np.max(X[:,2])]
 
     x1s = np.linspace(axes[0], axes[1], 200)
     x2s = np.linspace(axes[2], axes[3], 200)
-    x1, x2 = np.meshgrid(x1s, x2s)
-    X_new = np.c_[x1.ravel(), x2.ravel()]
+    x3s = np.linspace(axes[4], axes[5], 200)
+    
+    x1, x2, x3 = np.meshgrid(x1s, x2s, x3s)
+    X_new = np.c_[x1.ravel(), x2.ravel(), x3.ravel()]
     if nn:
         y_pred = ((tf.math.argmax(classifier(X_new), 1)).numpy()).reshape(x1.shape)
     else:
