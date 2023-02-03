@@ -121,9 +121,9 @@ def plot_decision_boundary(classifier, X, y, legend=False, plot_training=True, n
     x1, x2, x3 = np.meshgrid(x1s, x2s, x3s)
     X_new = np.c_[x1.ravel(), x2.ravel(), x3.ravel()]
     if nn:
-        y_pred = ((tf.math.argmax(classifier(X_new), 1)).numpy()).reshape(x1.shape)
+        y_pred = ((tf.math.argmax(classifier(X_new), 1)).numpy()).reshape(x1.shape[:2])
     else:
-        y_pred = classifier.predict(X_new).reshape(x1.shape)
+        y_pred = classifier.predict(X_new).reshape(x1.shape[:2])
 
     # Set different color for each class
     custom_cmap = cm.get_cmap('tab20')
