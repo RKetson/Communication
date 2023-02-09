@@ -36,9 +36,11 @@ def theoretical_error(mod, M, SNR_db, channel, epb=True):
             SNR_l = 10**(SNR_db/10)
             return (C / 2) * (1 - np.sqrt((D * SNR_l / 2) / (1 + D * SNR_l / 2)))
         if mod == 'PSK':
-            Pe = Prob_e(2, 2 * np.log2(M) * np.sin(np.pi / M)**2)
+            # Pe = Prob_e(2, 2 * np.log2(M) * np.sin(np.pi / M)**2)
+            Pe = Prob_e(2, 2 * np.sin(np.pi / M)**2)
         else:
-            Pe = Prob_e(4 * (1 - 1 / np.sqrt(M)), 3 * np.log2(M) / (M - 1))
+            Pe = Prob_e(4 * (1 - 1 / np.sqrt(M)), 3 * 1 / (M - 1))
+            # Pe = Prob_e(4 * (1 - 1 / np.sqrt(M)), 3 * np.log2(M) / (M - 1))
     
     if epb:
         return Pe/np.log2(M)

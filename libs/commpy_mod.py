@@ -164,8 +164,8 @@ class SISOFlatChannel(_FlatChannel):
         # Generate channel
         self.channel_gains = self.fading_param[0]
         if self.isComplex:
-            var = sqrt(0.5)/(2 - pi/2)
-            self.channel_gains += (normal(0, sqrt(var), nb_symb) + 1j * normal(0, sqrt(var), nb_symb)) * sqrt(self.fading_param[1])
+            # var = sqrt(0.5)/(2 - pi/2)
+            self.channel_gains += (normal(0, sqrt(0.5), nb_symb) + 1j * normal(0, sqrt(0.5), nb_symb)) * sqrt(self.fading_param[1])
         else:
             self.channel_gains += normal(0, sqrt(1/2), nb_symb) * sqrt(self.fading_param[1])
 
