@@ -64,7 +64,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
     else:
         raise ValueError(f'Channel type {type} not found')
     
-    return symbs, indices, output
+    return symbs.reshape(1,-1), indices.reshape(1,-1), output
 
 def main():
     num_of_symbols = 3000
