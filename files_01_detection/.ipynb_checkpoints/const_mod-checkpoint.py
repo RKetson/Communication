@@ -48,15 +48,29 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
     
     symbs, indices = generate_symbols(Mod, num_symbols, M)
     
+    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es):
+        output = np.array([])
+        
+        if len_faixa == 2:
+            for i in range(num_symbols):                
+                channel.set_SNR_dB(np.random.randint(SNR_dB[0], SNR_dB[1]), float(code_rate), Es)
+                output = np.append(output, channel.propagate([symbs[i]]))
+            output = np.array(output).reshape((-1, 2)).T
+        elif len_faixa == 1:
+            channel.set_SNR_dB(SNR_dB[0], float(code_rate), Es)
+            output = channel.propagate(symbs)
+        else:
+            raise ValueError(f'Faixa de SNR mal especificada')
+        
+        return output
+    
     if type == 'awgn':
         channel = SISOFlatChannel(None, (1 + 0j, 0j))
-        channel.set_SNR_dB(SNR_dB, float(code_rate), Es)
-        output = channel.propagate(symbs)
+        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es)
         
     elif type == 'rayleigh':
         channel = SISOFlatChannel(None, (0j, 1 + 0j))
-        channel.set_SNR_dB(SNR_dB, float(code_rate), Es)
-        output = channel.propagate(symbs)
+        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es)
     
     elif type == 'crazy':
         output = crazy_channel_propagate(symbs, SNR_dB)
