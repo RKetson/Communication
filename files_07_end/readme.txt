@@ -1,1 +1,0 @@
-Folder for notebook 07_end_to_end_auto_encoder.ipynb
