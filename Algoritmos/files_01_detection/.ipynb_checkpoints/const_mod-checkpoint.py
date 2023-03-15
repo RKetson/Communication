@@ -3,7 +3,7 @@ import commpy.modulation as cm
 import commpy.utilities as cu
 import matplotlib.pyplot as plt
 import commpy.channels
-from Algoritmos.libs.commpy_mod import SISOFlatChannel
+from libs.commpy_mod import SISOFlatChannel
 
 def mod_constellation(M, unitAvgPower=True, mod='PSK'):
     bits_per_symbol = int(np.log2(M))
