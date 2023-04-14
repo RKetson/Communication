@@ -52,7 +52,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
         output = np.array([])
         
         if len_faixa == 2:
-            snr_rand = np.random.randint(SNR_dB[0], SNR_dB[1] + 1, num_symbols)
+            snr_rand = np.random.uniform(SNR_dB[0], SNR_dB[1], num_symbols)
             for i in range(num_symbols):                
                 channel.set_SNR_dB(snr_rand[i], float(code_rate), Es)
                 output = np.append(output, channel.propagate([symbs[i]]))
