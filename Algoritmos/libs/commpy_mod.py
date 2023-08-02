@@ -134,7 +134,7 @@ class SISOFlatChannel(_FlatChannel):
         self.noise_std = noise_std
         self.fading_param = fading_param
 
-    def propagate(self, msg):
+    def propagate(self, msg, low_alph=False):
 
         """
         Propagates a message through the channel.
@@ -163,11 +163,12 @@ class SISOFlatChannel(_FlatChannel):
 
         # Generate channel
         self.channel_gains = self.fading_param[0]
+        qnt_alph = (1 if low_alph else nb_symb)
         if self.isComplex:
             # var = sqrt(0.5)/(2 - pi/2)
-            self.channel_gains += (normal(0, sqrt(0.5), nb_symb) + 1j * normal(0, sqrt(0.5), nb_symb)) * sqrt(self.fading_param[1])
+            self.channel_gains += (normal(0, sqrt(0.5), qnt_alph) + 1j * normal(0, sqrt(0.5), qnt_alph)) * sqrt(self.fading_param[1])
         else:
-            self.channel_gains += normal(0, sqrt(1/2), nb_symb) * sqrt(self.fading_param[1])
+            self.channel_gains += normal(0, sqrt(1/2), qnt_alph) * sqrt(self.fading_param[1])
 
         # Generate outputs
         alph = abs(self.channel_gains)

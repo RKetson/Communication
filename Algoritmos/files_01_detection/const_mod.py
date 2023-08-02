@@ -44,26 +44,33 @@ def generate_symbols(mod, transmissions=100, M=16):
 
     return x, ind
 
-def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
+def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
     
     symbs, indices = generate_symbols(Mod, num_symbols, M)
     
-    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es):
+    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=10):
         output = np.array([])
+        alph = np.array([])
         
         if len_faixa == 2:
             snr_rand = np.random.uniform(SNR_dB[0], SNR_dB[1], num_symbols)
-            for i in range(num_symbols):                
+            for i in range(0, num_symbols, vel_alph):                
                 channel.set_SNR_dB(snr_rand[i], float(code_rate), Es)
-                output = np.append(output, channel.propagate([symbs[i]]))
-            output = np.array(output).reshape((-1, 2)).T
+                out, al = channel.propagate(symbs[i:i+vel_alph], True)
+                alph = np.append(alph, np.array(al))
+                output = np.append(output, np.array(out))
+            output = np.array(output).reshape((-1, vel_alph))
         elif len_faixa == 1:
             channel.set_SNR_dB(SNR_dB[0], float(code_rate), Es)
-            output = channel.propagate(symbs)
+            for i in range(0, num_symbols, vel_alph):
+                out, alph = channel.propagate(symbs[i:i+vel_alph], True)
+                alph = np.append(alph, np.array(al))
+                output = np.append(output, np.array(out))
+            output = np.array(output).reshape((-1, vel_alph))
         else:
             raise ValueError(f'Faixa de SNR mal especificada')
         
-        return output
+        return output, alph
     
     if type == 'awgn':
         channel = SISOFlatChannel(None, (1 + 0j, 0j))
@@ -71,7 +78,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
         
     elif type == 'rayleigh':
         channel = SISOFlatChannel(None, (0j, 1 + 0j))
-        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es)
+        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es, vel_alph)
     
     elif type == 'crazy':
         output = crazy_channel_propagate(symbs, SNR_dB)
@@ -79,7 +86,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB):
     else:
         raise ValueError(f'Channel type {type} not found')
     
-    return symbs.reshape(1,-1), indices.reshape(1,-1), output
+    return symbs.reshape(1,-1), indices.reshape(1,-1), output[0], output[1]
 
 def main():
     num_of_symbols = 3000
