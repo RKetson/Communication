@@ -4,17 +4,35 @@ import commpy.utilities as cu
 import matplotlib.pyplot as plt
 import commpy.channels
 from libs.commpy_mod import SISOFlatChannel
+import commpy.channelcoding.convcode as cc
 
-def mod_constellation(M, unitAvgPower=True, mod='PSK'):
+def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
     bits_per_symbol = int(np.log2(M))
-    bitarrays = [cu.dec2bitarray(obj, bits_per_symbol)
-                 for obj
-                 in np.arange(0, M)]
+    bitarrays = []
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
-    const  = np.array([complex(sig_mod.modulate(bits)) for bits in bitarrays])
+    const = []
+    if trellis is None:
+        bitarrays = [cu.dec2bitarray(obj, bits_per_symbol)
+                     for obj
+                     in np.arange(0, M)]
+        const  = np.array([complex(sig_mod.modulate(bits)) for bits in bitarrays])
+    else:
+        bitarrays = [cc.conv_encode(cu.dec2bitarray(obj, bits_per_symbol), trellis)
+                     for obj
+                     in np.arange(0, M)]
+        const  = np.array([[complex(sig_mod.modulate(bits[i:i + bits_per_symbol])) for i in range(len(bits))] for             bits in bitarrays])
 
     if unitAvgPower and mod == 'QAM':
-        const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
+        if trellis is None:
+            const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
+        else:
+            total_memory = trellis.total_memory
+            k = trellis.k
+            n = trellis.n
+            rate = float(k) / n
+            n_out_bits = ((bits_per_symbol + total_memory + total_memory % k) / rate)
+            
+            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / n_out_bits
 
     return const
 
@@ -35,18 +53,34 @@ def generate_symbols(mod, transmissions=100, M=16):
     Returns
     -------
     """
-    constellation = mod_constellation(M, unitAvgPower=True, mod=mod)
+    # Parâmetros do código convolucional
+    bits_per_symbol = int(np.log2(M))
+    constraint_length = np.array(bits_per_symbol, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
+    code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
 
-    ind = np.random.randint(M, size=transmissions)
+    # Criando o objeto do código convolucional
+    trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
+    total_memory = trellis.total_memory
+    k = trellis.k
+    n = trellis.n
+    rate = float(k) / n
+    n_out = (bits_per_symbol + total_memory + total_memory % k) / rate
+    x = np.empty((1, int(n_out)))
+    ind = np.array([])
+    for i in range(transmissions):
+        constellation = mod_constellation(M, unitAvgPower=True, mod=mod, trellis=trellis)
 
-    # PSK symbols for each antenna
-    x   = constellation[ind]
+        ind = np.append(ind, np.random.randint(M))
 
+        # PSK symbols for each antenna
+        x   = np.vstack([x, constellation[int(ind[-1])]])
+
+    x = np.delete(x,(0), axis=0)
     return x, ind
 
 def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
     
-    symbs, indices = generate_symbols(Mod, num_symbols, M)
+    symbs, indices = generate_symbols(Mod, num_symbols, M, conv_code)
     
     def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=10):
         output = np.array([])

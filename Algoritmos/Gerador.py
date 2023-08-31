@@ -16,6 +16,7 @@ def Train_Data(Mod, total_num_symbols, M, channel_type, Es, code_rate, min, max,
     
     if local is not None:
         x.tofile(local + 'x_rand.dat')
+        channel_alph.tofile(local + 'alph.dat')
         y.tofile(local + 'y_rand.dat')
         symbs.tofile(local + 'symb.dat')
     
