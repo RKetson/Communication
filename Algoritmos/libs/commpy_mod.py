@@ -1,7 +1,7 @@
 from __future__ import division, print_function  # Python 2 compatibility
 
 from numpy import abs, sqrt, sum, zeros, identity, hstack, einsum, trace, kron, absolute, fromiter, array, exp, \
-    pi, cos
+    pi, cos, reshape
 from numpy.random import randn, random, standard_normal, normal
 from scipy.linalg import sqrtm
 
@@ -173,7 +173,7 @@ class SISOFlatChannel(_FlatChannel):
         # Generate outputs
         alph = abs(self.channel_gains)
         self.unnoisy_output = alph * msg
-        return self.unnoisy_output + self.noises, alph
+        return self.unnoisy_output + reshape(self.noises, (-1,1)), alph
         
     @property
     def fading_param(self):

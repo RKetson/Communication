@@ -17,20 +17,21 @@ def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
                      in np.arange(0, M)]
         const  = np.array([complex(sig_mod.modulate(bits)) for bits in bitarrays])
     else:
-        bitarrays = [cc.conv_encode(cu.dec2bitarray(obj, bits_per_symbol), trellis)
+        bitarrays = [cc.conv_encode(cu.dec2bitarray(obj, bits_per_symbol), trellis, 'cont')
                      for obj
                      in np.arange(0, M)]
-        const  = np.array([[complex(sig_mod.modulate(bits[i:i + bits_per_symbol])) for i in range(len(bits))] for             bits in bitarrays])
+        const  = np.array([[complex(sig_mod.modulate(bits[i:i + bits_per_symbol])) for i in range(0, len(bits), bits_per_symbol)] for             bits in bitarrays])
 
     if unitAvgPower and mod == 'QAM':
         if trellis is None:
             const = const / np.sqrt((M - 1) * (2 ** 2) / 6)
         else:
-            total_memory = trellis.total_memory
             k = trellis.k
             n = trellis.n
             rate = float(k) / n
-            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / ((bits_per_symbol + total_memory + total_memory % k)             / rate)
+            n_out_bits = (bits_per_symbol / rate)
+            
+            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / n_out_bits
 
     return const
 
@@ -58,11 +59,10 @@ def generate_symbols(mod, transmissions=100, M=16):
 
     # Criando o objeto do código convolucional
     trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
-    total_memory = trellis.total_memory
     k = trellis.k
     n = trellis.n
     rate = float(k) / n
-    n_out = (bits_per_symbol + total_memory + total_memory % k) / rate
+    n_out = 1 + (n - k)
     x = np.empty((1, int(n_out)))
     ind = np.array([])
     for i in range(transmissions):
@@ -78,7 +78,7 @@ def generate_symbols(mod, transmissions=100, M=16):
 
 def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
     
-    symbs, indices = generate_symbols(Mod, num_symbols, M, conv_code)
+    symbs, indices = generate_symbols(Mod, num_symbols, M)
     
     def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=10):
         output = np.array([])
@@ -91,6 +91,8 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
                 out, al = channel.propagate(symbs[i:i+vel_alph], True)
                 alph = np.append(alph, np.array(al))
                 output = np.append(output, np.array(out))
+            print(output)
+            print(np.array(output).shape)
             output = np.array(output).reshape((-1, vel_alph))
         elif len_faixa == 1:
             channel.set_SNR_dB(SNR_dB[0], float(code_rate), Es)
