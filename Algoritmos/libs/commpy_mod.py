@@ -173,7 +173,7 @@ class SISOFlatChannel(_FlatChannel):
         # Generate outputs
         alph = abs(self.channel_gains)
         self.unnoisy_output = alph * msg
-        return self.unnoisy_output + reshape(self.noises, (-1,1)), alph
+        return self.unnoisy_output + self.noises, alph
         
     @property
     def fading_param(self):

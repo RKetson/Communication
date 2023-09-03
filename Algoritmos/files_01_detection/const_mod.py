@@ -59,11 +59,8 @@ def generate_symbols(mod, transmissions=100, M=16):
 
     # Criando o objeto do código convolucional
     trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
-    k = trellis.k
-    n = trellis.n
-    rate = float(k) / n
-    n_out = 1 + (n - k)
-    x = np.empty((1, int(n_out)))
+    
+    x = np.array([])
     ind = np.array([])
     for i in range(transmissions):
         constellation = mod_constellation(M, unitAvgPower=True, mod=mod, trellis=trellis)
@@ -71,28 +68,25 @@ def generate_symbols(mod, transmissions=100, M=16):
         ind = np.append(ind, np.random.randint(M))
 
         # PSK symbols for each antenna
-        x   = np.vstack([x, constellation[int(ind[-1])]])
+        x   = np.append(x, constellation[int(ind[-1])])
 
-    x = np.delete(x,(0), axis=0)
     return x, ind
 
-def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
+def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
     
     symbs, indices = generate_symbols(Mod, num_symbols, M)
     
-    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=10):
+    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=20):
         output = np.array([])
         alph = np.array([])
         
         if len_faixa == 2:
             snr_rand = np.random.uniform(SNR_dB[0], SNR_dB[1], num_symbols)
-            for i in range(0, num_symbols, vel_alph):                
-                channel.set_SNR_dB(snr_rand[i], float(code_rate), Es)
+            for i in range(0, len(symbs), vel_alph):                
+                channel.set_SNR_dB(snr_rand[int(i/vel_alph)], float(code_rate), Es)
                 out, al = channel.propagate(symbs[i:i+vel_alph], True)
                 alph = np.append(alph, np.array(al))
                 output = np.append(output, np.array(out))
-            print(output)
-            print(np.array(output).shape)
             output = np.array(output).reshape((-1, vel_alph))
         elif len_faixa == 1:
             channel.set_SNR_dB(SNR_dB[0], float(code_rate), Es)
@@ -120,7 +114,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=10):
     else:
         raise ValueError(f'Channel type {type} not found')
     
-    return symbs.reshape(1,-1), indices.reshape(1,-1), output[0], output[1]
+    return symbs.reshape(1,-1), indices.reshape(1,-1), output[0].reshape(-1), output[1]
 
 def main():
     num_of_symbols = 3000
