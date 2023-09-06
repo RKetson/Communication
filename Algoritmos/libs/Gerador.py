@@ -1,5 +1,7 @@
 import numpy as np
-from files_01_detection.const_mod import Model
+import sys
+sys.path.append('..')
+from Files_aux.files_01_detection.const_mod import Model
 
 def Train_Data(Mod, total_num_symbols, M, channel_type, Es, code_rate, min, max, local=None):
     symbs, indices, channel_output, channel_alph = Model(Mod, total_num_symbols, M, channel_type, Es, code_rate, [min, max])

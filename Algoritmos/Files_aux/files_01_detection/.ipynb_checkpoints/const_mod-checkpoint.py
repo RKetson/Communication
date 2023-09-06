@@ -29,7 +29,7 @@ def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
             k = trellis.k
             n = trellis.n
             rate = float(k) / n
-            n_out_bits = (bits_per_symbol / rate)
+            n_out_bits = (bits_per_symbol * rate)
             
             const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / n_out_bits
 
@@ -54,7 +54,7 @@ def generate_symbols(mod, transmissions=100, M=16):
     """
     # Parâmetros do código convolucional
     bits_per_symbol = int(np.log2(M))
-    constraint_length = np.array(bits_per_symbol, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
+    constraint_length = np.array(3, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
     code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
 
     # Criando o objeto do código convolucional
