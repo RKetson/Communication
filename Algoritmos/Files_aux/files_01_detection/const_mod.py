@@ -6,7 +6,28 @@ import commpy.channels
 from libs.commpy_mod import SISOFlatChannel
 import commpy.channelcoding.convcode as cc
 
-def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
+def bit_generation(M, indices):
+    bits_per_symbol = int(np.log2(M))
+    bitarrays = [cu.dec2bitarray(obj, bits_per_symbol) for obj in indices]
+    
+    return bitarrays
+
+def codec_symbs(bits_array, bits_per_symbol, trellis):
+    codec_array = np.array([cc.conv_encode(bits, trellis, 'cont') for bits in bits_array])
+    
+    return codec_array.reshape((-1, bits_per_symbol))
+
+def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
+    sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
+    const  = np.array([complex(sig_mod.modulate(bits)) for bits in bits_array])
+    
+    if unitAvgPower and mod == 'QAM':
+            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / rate
+
+    return const.reshape(-1) 
+   
+"""
+def mod_constellation(M, indices, unitAvgPower=True, mod='PSK', trellis=None):
     bits_per_symbol = int(np.log2(M))
     bitarrays = []
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
@@ -14,12 +35,12 @@ def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
     if trellis is None:
         bitarrays = [cu.dec2bitarray(obj, bits_per_symbol)
                      for obj
-                     in np.arange(0, M)]
+                     in indices]
         const  = np.array([complex(sig_mod.modulate(bits)) for bits in bitarrays])
     else:
         bitarrays = [cc.conv_encode(cu.dec2bitarray(obj, bits_per_symbol), trellis, 'cont')
                      for obj
-                     in np.arange(0, M)]
+                     in indices]
         const  = np.array([[complex(sig_mod.modulate(bits[i:i + bits_per_symbol])) for i in range(0, len(bits), bits_per_symbol)] for             bits in bitarrays])
 
     if unitAvgPower and mod == 'QAM':
@@ -33,7 +54,8 @@ def mod_constellation(M, unitAvgPower=True, mod='PSK', trellis=None):
             
             const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / n_out_bits
 
-    return const
+    return const.reshape(-1)
+"""
 
 def mod_demod(mod, x, M, unitAvgPower=True):
     const = mod_constellation(M, unitAvgPower=unitAvgPower, mod=mod)
@@ -41,7 +63,7 @@ def mod_demod(mod, x, M, unitAvgPower=True):
     const = const.reshape(const.shape[0], 1)
     return abs(x - const).argmin(0)
 
-def generate_symbols(mod, transmissions=100, M=16):
+def generate_symbols(mod, transmissions=100, M=16, codec=False):
     """
     Parameters
     ----------
@@ -52,29 +74,39 @@ def generate_symbols(mod, transmissions=100, M=16):
     Returns
     -------
     """
-    # Parâmetros do código convolucional
+    ind = np.random.randint(0, M, transmissions)
     bits_per_symbol = int(np.log2(M))
-    constraint_length = np.array(3, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
-    code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
-
-    # Criando o objeto do código convolucional
-    trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
+    bits = bit_generation(M, ind)
+    x = []
+    rate = 1
     
-    x = np.array([])
-    ind = np.array([])
-    for i in range(transmissions):
-        constellation = mod_constellation(M, unitAvgPower=True, mod=mod, trellis=trellis)
+    if codec:
+        # Parâmetros do código convolucional
+        constraint_length = np.array(3, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
+        code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
 
-        ind = np.append(ind, np.random.randint(M))
+        # Criando o objeto do código convolucional
+        trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
+        rate = rate = float(trellis.k) / trellis.n
+        
+        bits = codec_symbs(bits, bits_per_symbol, trellis) 
+     
+    x = mod_constellation(bits, M, unitAvgPower=True, mod=mod, rate=rate)
+#    x = np.array([])
+#    ind = np.array([])
+#    for i in range(transmissions):
+#        constellation = mod_constellation(M, unitAvgPower=True, mod=mod, trellis=trellis)
+#
+#        ind = np.append(ind, np.random.randint(M))
 
         # PSK symbols for each antenna
-        x   = np.append(x, constellation[int(ind[-1])])
+#        x   = np.append(x, constellation[int(ind[-1])])
 
     return x, ind
 
 def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
-    
-    symbs, indices = generate_symbols(Mod, num_symbols, M)
+    codec = True if code_rate != 1 else False
+    symbs, indices = generate_symbols(Mod, num_symbols, M, codec)
     
     def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=20):
         output = np.array([])
