@@ -21,8 +21,8 @@ def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
     const  = np.array([complex(sig_mod.modulate(bits)) for bits in bits_array])
     
-    if unitAvgPower and mod == 'QAM':
-            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6)) / rate
+    #if unitAvgPower and mod == 'QAM':
+            #const = (const / np.sqrt((M - 1) * (2 ** 2) / 6))# / rate
 
     return const.reshape(-1) 
    
@@ -76,7 +76,8 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
     """
     ind = np.random.randint(0, M, transmissions)
     bits_per_symbol = int(np.log2(M))
-    bits = bit_generation(M, ind)
+    bits_gerados = bit_generation(M, ind)
+    bits = bits_gerados[:]
     x = []
     rate = 1
     
@@ -87,7 +88,7 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
 
         # Criando o objeto do código convolucional
         trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
-        rate = rate = float(trellis.k) / trellis.n
+        rate = float(trellis.k) / trellis.n
         
         bits = codec_symbs(bits, bits_per_symbol, trellis) 
      
@@ -102,11 +103,12 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
         # PSK symbols for each antenna
 #        x   = np.append(x, constellation[int(ind[-1])])
 
-    return x, ind
+    return x, ind, bits_gerados
 
 def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
     codec = True if code_rate != 1 else False
-    symbs, indices = generate_symbols(Mod, num_symbols, M, codec)
+    print(codec)
+    symbs, indices, bits = generate_symbols(Mod, num_symbols, M, codec)
     
     def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=20):
         output = np.array([])
@@ -145,8 +147,8 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
         
     else:
         raise ValueError(f'Channel type {type} not found')
-    
-    return symbs.reshape(1,-1), indices.reshape(1,-1), output[0].reshape(-1), output[1]
+    print(len(bits))
+    return symbs.reshape(1,-1), indices.reshape(1,-1), output[0].reshape(-1), output[1], bits
 
 def main():
     num_of_symbols = 3000
