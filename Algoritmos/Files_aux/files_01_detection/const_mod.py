@@ -12,10 +12,46 @@ def bit_generation(M, indices):
     
     return bitarrays
 
-def codec_symbs(bits_array, bits_per_symbol, trellis):
-    codec_array = np.array([cc.conv_encode(bits, trellis, 'cont') for bits in bits_array])
+#def codec_symbs(bits_array, bits_per_symbol, trellis):
+#    codec_array = np.array([cc.conv_encode(bits, trellis, 'cont') for bits in bits_array])
     
-    return codec_array.reshape((-1, bits_per_symbol))
+#    return codec_array.reshape((-1, bits_per_symbol))
+def codec_conv(msg, matriz_g):
+
+    n = matriz_g.shape[1]
+    k = matriz_g.shape[0]
+    rate = k / n
+
+    g_poly = []
+    for j in range(k):
+        y = [list(bin(matriz_g[j, i]).split('b')[1]) for i in range(n)]
+        g_poly.append(y)
+    g_poly = np.array(g_poly)
+
+    # Inicialização dos registradores de deslocamento
+    register = [0] * (g_poly.shape[-1] - 1)
+
+    # Inicialização da sequência codificada
+    encoded_data = []
+
+    # Implementação apenas com 1 bit de informação
+    # Codificação convolucional
+    for bit in msg:
+        # Atualiza os registradores de deslocamento
+        register.insert(0, bit)
+
+        # Calcula os bits de saída
+        output = [sum([bit * int(coef) for coef, bit in zip(g_poly[0, i], register)]) % 2
+                for i in range(n)]
+
+        # Adiciona os bits de saída à sequência codificada
+        encoded_data.extend(output)
+
+        # Remove os bits mais antigos dos registradores de deslocamento
+        register.pop()
+
+    # A sequência codificada é a saída
+    return np.array(encoded_data)
 
 def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
@@ -77,20 +113,21 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
     ind = np.random.randint(0, M, transmissions)
     bits_per_symbol = int(np.log2(M))
     bits_gerados = bit_generation(M, ind)
-    bits = bits_gerados[:]
+    bits = np.array(bits_gerados[:])
     x = []
     rate = 1
     
     if codec:
         # Parâmetros do código convolucional
-        constraint_length = np.array(3, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
-        code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
+        #constraint_length = np.array(3, ndmin=1)  # Comprimento de restrição do código (3 neste exemplo)
+        #code_generator = np.array((5, 7), ndmin=2)  # Polinômio gerador em octal
 
         # Criando o objeto do código convolucional
-        trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
-        rate = float(trellis.k) / trellis.n
-        
-        bits = codec_symbs(bits, bits_per_symbol, trellis) 
+        #trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
+        #rate = float(trellis.k) / trellis.n
+        g = np.array([[5, 7]])
+        bits = codec_conv(bits.reshape(-1), g).reshape((-1, bits_per_symbol))
+        #bits = codec_symbs(bits, bits_per_symbol, trellis) 
      
     x = mod_constellation(bits, M, unitAvgPower=True, mod=mod, rate=rate)
 #    x = np.array([])
