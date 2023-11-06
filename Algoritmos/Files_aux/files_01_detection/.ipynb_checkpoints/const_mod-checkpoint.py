@@ -57,10 +57,10 @@ def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
     const  = np.array([complex(sig_mod.modulate(bits)) for bits in bits_array])
     
-    #if unitAvgPower and mod == 'QAM':
-            #const = (const / np.sqrt((M - 1) * (2 ** 2) / 6))# / rate
+    if unitAvgPower and mod == 'QAM':
+            const = (const / np.sqrt((M - 1) * (2 ** 2) / 6))
 
-    return const.reshape(-1) 
+    return (const / rate).reshape(-1) 
    
 """
 def mod_constellation(M, indices, unitAvgPower=True, mod='PSK', trellis=None):
@@ -146,7 +146,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
     codec = True if code_rate != 1 else False
     print(codec)
     symbs, indices, bits = generate_symbols(Mod, num_symbols, M, codec)
-    
+
     def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=20):
         output = np.array([])
         alph = np.array([])
