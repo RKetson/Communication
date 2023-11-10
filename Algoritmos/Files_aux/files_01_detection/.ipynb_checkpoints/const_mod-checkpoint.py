@@ -51,7 +51,7 @@ def codec_conv(msg, matriz_g):
         register.pop()
 
     # A sequência codificada é a saída
-    return np.array(encoded_data)
+    return np.array(encoded_data), rate
 
 def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
@@ -126,9 +126,10 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
         #trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
         #rate = float(trellis.k) / trellis.n
         g = np.array([[5, 7]])
-        bits = codec_conv(bits.reshape(-1), g).reshape((-1, bits_per_symbol))
+        bits, rate = codec_conv(bits.reshape(-1), g)
+        bits = bits.reshape((-1, bits_per_symbol))
         #bits = codec_symbs(bits, bits_per_symbol, trellis) 
-     
+    
     x = mod_constellation(bits, M, unitAvgPower=True, mod=mod, rate=rate)
 #    x = np.array([])
 #    ind = np.array([])
@@ -142,30 +143,30 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
 
     return x, ind, bits_gerados
 
-def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
+def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=0):
     codec = True if code_rate != 1 else False
-    print(codec)
     symbs, indices, bits = generate_symbols(Mod, num_symbols, M, codec)
-
-    def Propagate(channel, len_faixa, SNR_dB, code_rate, Es, vel_alph=20):
+    def Propagate(channel, len_faixa):
         output = np.array([])
         alph = np.array([])
         
         if len_faixa == 2:
             snr_rand = np.random.uniform(SNR_dB[0], SNR_dB[1], num_symbols)
-            for i in range(0, len(symbs), vel_alph):                
-                channel.set_SNR_dB(snr_rand[int(i/vel_alph)], float(code_rate), Es)
-                out, al = channel.propagate(symbs[i:i+vel_alph], True)
+            step = 1 if type == "awgn" else vel_alph
+            for i in range(0, len(symbs), step):                
+                channel.set_SNR_dB(snr_rand[int(i/step)], float(code_rate), Es)
+                out, al = channel.propagate(symbs[i:i+step], True)
                 alph = np.append(alph, np.array(al))
                 output = np.append(output, np.array(out))
-            output = np.array(output).reshape((-1, vel_alph))
+            output = np.array(output).reshape(-1) if type == "awgn" else np.array(output).reshape((-1, vel_alph))
         elif len_faixa == 1:
             channel.set_SNR_dB(SNR_dB[0], float(code_rate), Es)
-            for i in range(0, num_symbols, vel_alph):
-                out, alph = channel.propagate(symbs[i:i+vel_alph], True)
+            step = 1 if type == "awgn" else vel_alph
+            for i in range(0, len(symbs), step):
+                out, al = channel.propagate(symbs[i:i+step], True)
                 alph = np.append(alph, np.array(al))
                 output = np.append(output, np.array(out))
-            output = np.array(output).reshape((-1, vel_alph))
+            output = np.array(output).reshape(-1) if type == "awgn" else np.array(output).reshape((-1, vel_alph))
         else:
             raise ValueError(f'Faixa de SNR mal especificada')
         
@@ -173,18 +174,18 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=20):
     
     if type == 'awgn':
         channel = SISOFlatChannel(None, (1 + 0j, 0j))
-        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es)
+        output = Propagate(channel, len(SNR_dB))
         
     elif type == 'rayleigh':
         channel = SISOFlatChannel(None, (0j, 1 + 0j))
-        output = Propagate(channel, len(SNR_dB), SNR_dB, code_rate, Es, vel_alph)
+        output = Propagate(channel, len(SNR_dB))
     
     elif type == 'crazy':
         output = crazy_channel_propagate(symbs, SNR_dB)
         
     else:
         raise ValueError(f'Channel type {type} not found')
-    print(len(bits))
+        
     return symbs.reshape(1,-1), indices.reshape(1,-1), output[0].reshape(-1), output[1], bits
 
 def main():
