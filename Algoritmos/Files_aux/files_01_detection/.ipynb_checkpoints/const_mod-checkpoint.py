@@ -16,6 +16,58 @@ def bit_generation(M, indices):
 #    codec_array = np.array([cc.conv_encode(bits, trellis, 'cont') for bits in bits_array])
     
 #    return codec_array.reshape((-1, bits_per_symbol))
+class Convolucional:
+    def __init__(self, matriz_g):
+        self.__n = matriz_g.shape[1]
+        self.__k = matriz_g.shape[0]
+        self.__rate = self.__k / self.__n
+
+        self.__g_poly = []
+        for j in range(self.__k):
+            y = [list(bin(matriz_g[j, i]).split('b')[1]) for i in range(self.__n)]
+            self.__g_poly.append(y)
+        self.__g_poly = np.array(self.__g_poly)
+
+        self.__lenMemory = (self.__g_poly.shape[-1] - 1)
+
+        # Inicialização da sequência codificada
+        self.__encoded_data = []
+        
+    def getK(self):
+        return self.__k
+    
+    def getN(self):
+        return self.__n
+
+    def getData(self):
+        return self.__encoded_data
+
+    def getRate(self):
+        return self.__rate
+
+    def getLenMemory(self):
+        return self.__lenMemory
+    
+    def codec(self, msg):
+        # Inicialização dos registradores de deslocamento
+        register = [0] * self.__lenMemory
+        
+        # Implementação apenas com 1 bit de informação
+        # Codificação convolucional
+        for bit in msg:
+            # Atualiza os registradores de deslocamento
+            register.insert(0, bit)
+
+            # Calcula os bits de saída
+            output = [sum([bit * int(coef) for coef, bit in zip(self.__g_poly[0, i], register)]) % 2
+                    for i in range(self.__n)]
+
+            # Adiciona os bits de saída à sequência codificada
+            self.__encoded_data.extend(output)
+
+            # Remove os bits mais antigos dos registradores de deslocamento
+            register.pop()
+"""
 def codec_conv(msg, matriz_g):
 
     n = matriz_g.shape[1]
@@ -52,6 +104,7 @@ def codec_conv(msg, matriz_g):
 
     # A sequência codificada é a saída
     return np.array(encoded_data), rate
+"""
 
 def mod_constellation(bits_array, M, unitAvgPower=True, mod='PSK', rate=1):
     sig_mod = cm.PSKModem(M) if mod == 'PSK' else cm.QAMModem(M)
@@ -126,8 +179,18 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
         #trellis = cc.Trellis(memory=constraint_length, g_matrix=code_generator)
         #rate = float(trellis.k) / trellis.n
         g = np.array([[5, 7]])
-        bits, rate = codec_conv(bits.reshape(-1), g)
-        bits = bits.reshape((-1, bits_per_symbol))
+        codificador = Convolucional(g)
+        rate = codificador.getRate()
+        bits = bits.reshape(-1)
+        bits_limit = (5 * codificador.getLenMemory())**2
+        lenBits = len(bits)
+        
+        for i in range(0, lenBits, bits_limit):
+            step = bits_limit if i + bits_limit < lenBits else lenBits % bits_limit
+            codificador.codec(bits[i : i + step])
+        
+        print(lenBits, len(codificador.getData()))
+        bits = np.array(codificador.getData()).reshape((-1, bits_per_symbol))
         #bits = codec_symbs(bits, bits_per_symbol, trellis) 
     
     x = mod_constellation(bits, M, unitAvgPower=True, mod=mod, rate=rate)
