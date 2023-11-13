@@ -217,7 +217,7 @@ def Model(Mod, num_symbols, M, type, Es, code_rate, SNR_dB, vel_alph=0):
             snr_rand = np.random.uniform(SNR_dB[0], SNR_dB[1], num_symbols)
             step = 1 if type == "awgn" else vel_alph
             for i in range(0, len(symbs), step):                
-                channel.set_SNR_dB(snr_rand[int(i/step)], float(code_rate), Es)
+                channel.set_SNR_dB(snr_rand[int(i/step * code_rate)], float(code_rate), Es)
                 out, al = channel.propagate(symbs[i:i+step], True)
                 alph = np.append(alph, np.array(al))
                 output = np.append(output, np.array(out))
