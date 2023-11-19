@@ -186,7 +186,7 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
         lenBits = len(bits)
         
         for i in range(0, lenBits, bits_limit):
-            step = bits_limit if i + bits_limit < lenBits else lenBits % bits_limit
+            step = bits_limit if i + bits_limit <= lenBits else lenBits % bits_limit
             codificador.codec(bits[i : i + step])
         
         print(lenBits, len(codificador.getData()))
