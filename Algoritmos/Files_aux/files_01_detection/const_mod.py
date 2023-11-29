@@ -188,8 +188,7 @@ def generate_symbols(mod, transmissions=100, M=16, codec=False):
         for i in range(0, lenBits, bits_limit):
             step = bits_limit if i + bits_limit <= lenBits else lenBits % bits_limit
             codificador.codec(bits[i : i + step])
-        
-        print(lenBits, len(codificador.getData()))
+            
         bits = np.array(codificador.getData()).reshape((-1, bits_per_symbol))
         #bits = codec_symbs(bits, bits_per_symbol, trellis) 
     
